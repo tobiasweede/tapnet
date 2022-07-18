@@ -159,11 +159,12 @@ def train():
         if args.use_metric:
             loss_train = loss_train + args.metric_param * proto_dist
 
-        if abs(loss_train.item() - loss_list[-1]) < args.stop_thres \
-                or loss_train.item() > loss_list[-1]:
-            break
-        else:
-            loss_list.append(loss_train.item())
+        #loss_delta = abs(loss_train.item() - loss_list[-1])
+        #if loss_delta < args.stop_thres \
+        #        or loss_train.item() > loss_list[-1]:
+        #    break
+        #else:
+        loss_list.append(loss_train.item())
 
         acc_train = accuracy(output[idx_train], labels[idx_train])
         loss_train.backward()

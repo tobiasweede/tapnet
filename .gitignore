@@ -136,3 +136,6 @@ plot/daily-minimum-temperatures.csv
 .DS_Store
 cmd_orig.md
 cmd.md
+
+data/*
+plot/*
