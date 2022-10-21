@@ -1,10 +1,36 @@
+import re
+
 import numpy as np
 import scipy.sparse as sp
 import sklearn
 import sklearn.metrics
 import torch
+import torch.nn.functional as F
+import torch.nn as nn
 import pandas as pd
 import random
+from columns import COLUMNS, SMALL_COLUMNS
+
+
+
+class FocalLoss(nn.Module):
+    """
+    see https://www.tutorialexample.com/implement-focal-loss-for-multi-label-classification-in-pytorch-pytorch-tutorial/
+    """
+    def __init__(self, alpha=1.0, gamma=2.0):
+        super(FocalLoss, self).__init__()
+        self.alpha = alpha
+        self.gamma = gamma
+
+    def forward(self, inputs, targets):
+        '''
+        :param inputs: batch_size * dim
+        :param targets: (batch,)
+        :return:
+        '''
+        bce_loss = F.cross_entropy(inputs, targets)
+        loss = self.alpha * (1 - torch.exp(-bce_loss)) ** self.gamma * bce_loss
+        return loss
 
 def boolean_string(s):
     if s not in {'False', 'True'}:
@@ -25,6 +51,55 @@ def loaddata(filename):
     a = np.array(df.as_matrix())
     return a
 
+def load_custom_ts(
+        path='/opt/et-data/preprocessed',
+        columns=COLUMNS,
+        duration_max=45,
+        start=0,
+        stop=0,
+        step="1.0",
+        target_col="product_bought_healthy",
+        random_seed=0,
+        split_ratio=0.2,
+        within_allowed=False,
+        tensor_format=True,
+):
+    # load csv
+    df = pd.read_csv(f"{path}/preprocessed_v1_{duration_max}_sec_{step}step.csv")
+
+    # label
+    y = df.groupby(['subject', 'task']).first()[target_col].to_numpy()
+    nclass = int(np.amax(y)) + 1
+
+    # convert all features np array
+    pattern = re.compile(r'^product_bought.*')
+    X = df.set_index(['subject', 'task'])
+    col_list = [col for col in X.columns if col not in ['step'] and not pattern.match(col)]
+    current_list = []
+    for idx in X.index.unique():
+        current_list.append(X.loc[idx][col_list].to_numpy())
+    X = np.array(current_list)
+
+    # create train / val / test mask and indices
+    n_trails = int(y.shape[0])
+    mask_1 = [1] * int(n_trails * 0.2)  # val
+    mask_2 = [2] * int(n_trails * 0.2)  # test
+    mask_0 = [0] * (n_trails - len(mask_1) - len(mask_2))  # train
+    mask = np.array(mask_0 + mask_1 + mask_2)
+    random.seed(random_seed)
+    random.shuffle(mask)
+    idx_train = np.where(mask == 0)[0]
+    idx_val = np.where(mask == 1)[0]
+    idx_test = np.where(mask == 2)[0]
+
+    if tensor_format:
+        X = torch.FloatTensor(X)
+        labels = torch.LongTensor(y)
+        idx_train = torch.LongTensor(idx_train)
+        idx_val = torch.LongTensor(idx_val)
+        idx_test = torch.LongTensor(idx_test)
+
+    return X, labels, idx_train, idx_val, idx_test, nclass
 
 def load_raw_ts(path, dataset, tensor_format=True):
     path = path + "raw/" + dataset + "/"
@@ -39,8 +114,8 @@ def load_raw_ts(path, dataset, tensor_format=True):
 
 
     train_size = y_train.shape[0]
-
     total_size = labels.shape[0]
+
     idx_train = range(train_size)
     idx_val = range(train_size, total_size)
     idx_test = range(train_size, total_size)
@@ -74,6 +149,20 @@ def accuracy(output, labels):
     return accuracy_score
 
 
+def fbeta(output, labels, average='macro', beta=1.5):
+    preds = output.max(1)[1].cpu().numpy()
+    labels = labels.cpu().numpy()
+    fbeta_score = (sklearn.metrics.fbeta_score(labels, preds, average=average, beta=beta))
+
+    return fbeta_score
+
+
+def confusion_matrix(output, labels, average='weighted', beta=1.5):
+    preds = output.max(1)[1].cpu().numpy()
+    labels = labels.cpu().numpy()
+    cm = sklearn.metrics.confusion_matrix(labels, preds)
+
+    return cm
 
 def euclidean_dist(x, y):
     # x: N x D
