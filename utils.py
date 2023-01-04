@@ -103,12 +103,12 @@ def load_custom_ts(
 
     if tensor_format:
         X = torch.FloatTensor(X)
-        labels = torch.LongTensor(y)
+        y = torch.LongTensor(y)
         idx_train = torch.LongTensor(idx_train)
         idx_val = torch.LongTensor(idx_val)
         idx_test = torch.LongTensor(idx_test)
 
-    return X, labels, idx_train, idx_val, idx_test, nclass
+    return X, y, idx_train, idx_val, idx_test, nclass
 
 
 def load_raw_ts(path, dataset, tensor_format=True):
