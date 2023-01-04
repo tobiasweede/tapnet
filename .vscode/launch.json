@@ -1,18 +1,26 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
-    "version": "0.2.0",
-    "configurations": [
-        
-        {
-            "name": "TapNet: train.py",
-            "type": "python",
-            "request": "launch",
-            "program": "train.py",
-            "args": ["--epochs", "50"],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        }
-    ]
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "TapNet: train.py",
+      "type": "python",
+      "request": "launch",
+      "program": "train.py",
+      "args": ["--epochs", "50"],
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "TapNet: ray_tapnet.py",
+      "type": "python",
+      "request": "launch",
+      "program": "ray_tapnet.py",
+      "args": ["--cuda", "True", "--local-dir", "./results", "--smoke-test"],
+      "console": "integratedTerminal",
+      "justMyCode": true
+    }
+  ]
 }

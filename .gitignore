@@ -1,6 +1,8 @@
 .idea/
 __pycache__/
 
+[Rr]esults/
+
 baseline/
 cmd.txt
 # =================================

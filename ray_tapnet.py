@@ -1,25 +1,30 @@
 # Original Code here:
 # https://github.com/pytorch/examples/blob/master/mnist/main.py
 
-from ray import air, tune
-from ray.air import session
-from ray.tune.schedulers import AsyncHyperBandScheduler
-from utils import (
-    output_conv_size,
-    euclidean_dist,
-    focal_loss,
-    fbeta,
-    load_custom_ts,
-    boolean_string,
-)
 import argparse
-import ray
+import os
 import sys
+from math import floor
+from pathlib import Path
+from shutil import rmtree
+
+import ray
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from math import floor
+from ray import air, tune
+from ray.air import session
+from ray.tune.schedulers import AsyncHyperBandScheduler
+
+from utils import (
+    boolean_string,
+    euclidean_dist,
+    fbeta,
+    focal_loss,
+    load_custom_ts,
+    output_conv_size,
+)
 
 # Change these values if you want the training to run quicker or slower.
 EPOCH_SIZE = 512
@@ -321,7 +326,7 @@ def train_tapnet(config):
         idx_val,
         idx_test,
         nclass,
-    ) = load_custom_ts()
+    ) = load_custom_ts(path=args.data_path)
     if use_cuda:
         features, labels, idx_train = (
             features.cuda(),
@@ -375,10 +380,55 @@ def train_tapnet(config):
         # Set this to run Tune.
         session.report({"fbeta": fbeta, "loss": loss})
 
+
+def test_best_model(best_result):
+    best_trained_model = TapNet()
+    device = "cuda:0" if torch.cuda.is_available() else "cpu"
+    best_trained_model.to(device)
+
+    checkpoint_path = os.path.join(
+        best_result.checkpoint.to_directory(), "checkpoint.pt"
+    )
+
+    model_state, optimizer_state = torch.load(checkpoint_path)
+    best_trained_model.load_state_dict(model_state)
+
+    trainset, testset = load_data()
+
+    testloader = torch.utils.data.DataLoader(
+        testset, batch_size=4, shuffle=False, num_workers=2
+    )
+
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for data in testloader:
+            images, labels = data
+            images, labels = images.to(device), labels.to(device)
+            outputs = best_trained_model(images)
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+
+    print("Best trial test set accuracy: {}".format(correct / total))
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="PyTorch TapNet Tuning")
 
     parser.add_argument("--seed", type=int, default=42, help="Random seed.")
+
+    parser.add_argument(
+        "--data_path", type=str, default="./data/", help="Data path."
+    )
+
+    parser.add_argument(
+        "--local-dir",
+        required=True,
+        action="store",
+        dest="local_dir",
+        help="name of the log folder",
+    )
 
     # Ray parameters
     parser.add_argument(
@@ -405,7 +455,7 @@ def parse_args():
     # Training parameter settings
     parser.add_argument(
         "--epochs", type=int, default=3000, help="Number of epochs to train."
-    )    
+    )
     parser.add_argument(
         "--stop_thres",
         type=float,
@@ -493,51 +543,80 @@ def parse_args():
 
 
 if __name__ == "__main__":
-    args, _ = parse_args()
-    torch.manual_seed(args.seed)
-    if args.cuda:
-        torch.cuda.manual_seed(args.seed)
-    args.sparse = True
-    args.layers = [int(l) for l in args.layers.split(",")]
-    args.kernels = [int(l) for l in args.kernels.split(",")]
-    args.filters = [int(l) for l in args.filters.split(",")]
-    args.rp_params = [float(l) for l in args.rp_params.split(",")]
+    try:
+        args, _ = parse_args()
+        torch.manual_seed(args.seed)
+        if args.cuda:
+            torch.cuda.manual_seed(args.seed)
 
-    if args.server_address:
-        ray.init(f"ray://{args.server_address}")
-    elif args.ray_address:
-        ray.init(address=args.ray_address)
-    else:
-        ray.init(num_cpus=2 if args.smoke_test else None)
+        # set path for gpu server
+        if os.uname()[1] == "e9f2fb23c0a3":
+            args.data_path = "/workspace/data/TobiasW/ray-inception/data"
 
-    # for early stopping
-    sched = AsyncHyperBandScheduler()
+        args.sparse = True
+        args.layers = [int(l) for l in args.layers.split(",")]
+        args.kernels = [int(l) for l in args.kernels.split(",")]
+        args.filters = [int(l) for l in args.filters.split(",")]
+        args.rp_params = [float(l) for l in args.rp_params.split(",")]
 
-    resources_per_trial = {
-        "cpu": 2,
-        "gpu": int(args.cuda),
-    }  # set this for GPUs
-    tuner = tune.Tuner(
-        tune.with_resources(train_tapnet, resources=resources_per_trial),
-        tune_config=tune.TuneConfig(
-            metric="fbeta",
-            mode="max",
-            scheduler=sched,
-            num_samples=1 if args.smoke_test else 50,
-        ),
-        run_config=air.RunConfig(
-            name="exp",
-            stop={
-                "fbeta": 0.98,
-                "training_iteration": 5 if args.smoke_test else 100,
+        if not os.path.exists(args.local_dir):
+            os.makedirs(args.local_dir)
+
+        if args.server_address:
+            ray.init(f"ray://{args.server_address}")
+        elif args.ray_address:
+            ray.init(address=args.ray_address)
+        else:
+            ray.init(num_cpus=2 if args.smoke_test else None)
+
+        # for early stopping
+        sched = AsyncHyperBandScheduler()
+
+        resources_per_trial = {
+            "cpu": 2,
+            "gpu": int(args.cuda),
+        }  # set this for GPUs
+        tuner = tune.Tuner(
+            tune.with_resources(train_tapnet, resources=resources_per_trial),
+            tune_config=tune.TuneConfig(
+                metric="fbeta",
+                mode="max",
+                scheduler=sched,
+                num_samples=1 if args.smoke_test else 50,
+            ),
+            run_config=air.RunConfig(
+                name="exp",
+                stop={
+                    "fbeta": 0.98,
+                    "training_iteration": 5 if args.smoke_test else 100,
+                },
+                local_dir=args.local_dir,
+            ),
+            param_space={
+                "args": args,
+                "lr": tune.loguniform(1e-4, 1e-2),
+                "wd": tune.uniform(0.5, 0.9),
             },
-        ),
-        param_space={
-            "args": args,
-            "lr": tune.loguniform(1e-4, 1e-2),
-            "wd": tune.uniform(0.5, 0.9),
-        },
-    )
-    results = tuner.fit()
+        )
+        results = tuner.fit()
 
-    print("Best config is:", results.get_best_result().config)
+        best_result = results.get_best_result("fbeta", "max")
+
+        print("Best trial config: {}".format(best_result.config))
+        print(
+            "Best trial final validation loss: {}".format(
+                best_result.metrics["loss"]
+            )
+        )
+        print(
+            "Best trial final validation fbeta: {}".format(
+                best_result.metrics["fbeta"]
+            )
+        )
+
+        test_best_model(best_result)
+
+    except Exception as e:
+        print(e)
+    finally:
+        print("Best config is:", results.get_best_result().config)

@@ -1,13 +1,13 @@
-from __future__ import division
-from __future__ import print_function
-from ast import parse
+from __future__ import division, print_function
 
+import argparse
 import math
 import sys
 import time
-import argparse
+from ast import parse
 
 import torch.optim as optim
+
 from tapnet import TapNet
 from utils import *
 
@@ -24,7 +24,7 @@ def parse_args():
         help="use custom data loader function",
     )
     parser.add_argument(
-        "--data_path", type=str, default="./data/", help="the path of data."
+        "--data_path", type=str, default="./data/", help="Data path."
     )
     parser.add_argument(
         "--dataset",
@@ -261,7 +261,7 @@ def main():
             idx_val,
             idx_test,
             nclass,
-        ) = load_custom_ts()
+        ) = load_custom_ts(path=args.data_path)
     else:
         print("Loading dataset", args.dataset, "...")
         features, labels, idx_train, idx_val, idx_test, nclass = load_raw_ts(
