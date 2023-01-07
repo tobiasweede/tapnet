@@ -573,9 +573,10 @@ if __name__ == "__main__":
         sched = AsyncHyperBandScheduler()
 
         resources_per_trial = {
-            "cpu": 2,
-            "gpu": int(args.cuda),
-        }  # set this for GPUs
+            "cpu": float(2),
+            "gpu": float(args.cuda),
+        }
+
         tuner = tune.Tuner(
             tune.with_resources(train_tapnet, resources=resources_per_trial),
             tune_config=tune.TuneConfig(

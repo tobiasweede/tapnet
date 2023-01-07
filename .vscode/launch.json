@@ -9,7 +9,7 @@
       "type": "python",
       "request": "launch",
       "program": "train.py",
-      "args": ["--epochs", "50"],
+      "args": ["--epochs", "50", "--data_path", "../ray-inception/data"],
       "console": "integratedTerminal",
       "justMyCode": true
     },

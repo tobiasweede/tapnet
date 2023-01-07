@@ -24,7 +24,7 @@ def parse_args():
         help="use custom data loader function",
     )
     parser.add_argument(
-        "--data_path", type=str, default="./data/", help="Data path."
+        "--data_path", type=str, default="./data", help="Data path."
     )
     parser.add_argument(
         "--dataset",
