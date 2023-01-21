@@ -21,7 +21,7 @@ TEST_SIZE = 256
 
 def parse_args():
     """Parse config args"""
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="PyTorch TapNet Tuning")
 
     # dataset settings
     parser.add_argument(
@@ -150,7 +150,6 @@ def parse_args():
     )
 
     # Training settings
-    parser = argparse.ArgumentParser(description="PyTorch MNIST Example")
     parser.add_argument(
         "--use-gpu",
         action="store_true",

@@ -14,11 +14,29 @@
       "justMyCode": true
     },
     {
-      "name": "TapNet: ray_tapnet.py",
+      "name": "TapNet: ray_tapnet_functional.py",
       "type": "python",
       "request": "launch",
       "program": "ray_tapnet.py",
-      "args": ["--cuda", "True", "--local-dir", "./results", "--smoke-test"],
+      "args": ["--cuda", "True", "--local-dir", "./results"],
+      "console": "integratedTerminal",
+      "justMyCode": true
+    }
+    {
+      "name": "TapNet: ray_tapnet_functional.py smoke test",
+      "type": "python",
+      "request": "launch",
+      "program": "ray_tapnet_functional.py",
+      "args": ["--cuda", "True", "--smoke-test"],
+      "console": "integratedTerminal",
+      "justMyCode": true
+    }
+    {
+      "name": "TapNet: ray_tapnet_functional.py local debug",
+      "type": "python",
+      "request": "launch",
+      "program": "ray_tapnet_functional.py",
+      "args": ["--cuda", "True", "--smoke-test", "--local-debug"],
       "console": "integratedTerminal",
       "justMyCode": true
     }

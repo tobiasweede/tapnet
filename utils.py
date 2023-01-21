@@ -75,32 +75,33 @@ def load_custom_ts(
     nclass = int(np.amax(y)) + 1
 
     # convert all features np array
-    # target_pattern = re.compile(r"^product_bought.*")
-    # head_pattern = re.compile(r"^head*")
-    # X = df.set_index(["subject", "task"])
-    # col_list = [
-    #     col
-    #     for col in X.columns
-    #     if col not in ["step", "gender"]
-    #     and not target_pattern.match(col)
-    #     and not head_pattern.match(col)
-    # ]
-    # current_list = []
-    # for idx in X.index.unique():
-    #     current_list.append(X.loc[idx][col_list].to_numpy())
-    # X = np.array(current_list)
-
     target_pattern = re.compile(r"^product_bought.*")
     head_pattern = re.compile(r"^head*")
     X = df.set_index(["subject", "task"])
-    filtered_cols = [
+    col_list = [
         col
         for col in X.columns
         if col not in ["step", "gender"]
         and not target_pattern.match(col)
         and not head_pattern.match(col)
     ]
-    X = X[filtered_cols].reset_index(drop=True).to_numpy()
+    current_list = []
+    for idx in X.index.unique():
+        current_list.append(X.loc[idx][col_list].to_numpy())
+    X = np.array(current_list)
+
+    # try to optimize conversion - unfinished...
+    # target_pattern = re.compile(r"^product_bought.*")
+    # head_pattern = re.compile(r"^head*")
+    # X = df.set_index(["subject", "task"])
+    # filtered_cols = [
+    #     col
+    #     for col in X.columns
+    #     if col not in ["step", "gender"]
+    #     and not target_pattern.match(col)
+    #     and not head_pattern.match(col)
+    # ]
+    # X = X[filtered_cols].reset_index(drop=True).to_numpy()
 
     # create train / val / test mask and indices
     n_trails = int(y.shape[0])
