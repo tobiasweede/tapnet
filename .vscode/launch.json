@@ -18,7 +18,7 @@
       "type": "python",
       "request": "launch",
       "program": "ray_tapnet.py",
-      "args": ["--cuda", "True", "--local-dir", "./results"],
+      "args": ["--cuda", "True", "--local-dir", "./results", "--data-path", "/workspace/data/TobiasW/ray-inception/data"],
       "console": "integratedTerminal",
       "justMyCode": true
     }
@@ -27,7 +27,7 @@
       "type": "python",
       "request": "launch",
       "program": "ray_tapnet_functional.py",
-      "args": ["--cuda", "True", "--smoke-test"],
+      "args": ["--cuda", "True", "--smoke-test", "--data-path", "/workspace/data/TobiasW/ray-inception/data"],
       "console": "integratedTerminal",
       "justMyCode": true
     }
@@ -36,7 +36,7 @@
       "type": "python",
       "request": "launch",
       "program": "ray_tapnet_functional.py",
-      "args": ["--cuda", "True", "--smoke-test", "--local-debug"],
+      "args": ["--cuda", "True", "--smoke-test", "--local-debug", "--data-path", "/workspace/data/TobiasW/ray-inception/data"],
       "console": "integratedTerminal",
       "justMyCode": true
     }

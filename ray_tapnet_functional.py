@@ -9,15 +9,15 @@ from math import floor
 from pathlib import Path
 from shutil import rmtree
 
+from ray import air, tune
+from ray.air import session
+from ray.tune.schedulers import AsyncHyperBandScheduler
+from torchmetrics import ConfusionMatrix
 import ray
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from ray import air, tune
-from ray.air import session
-from ray.tune.schedulers import AsyncHyperBandScheduler
-from sklearn.metrics import confusion_matrix
 
 from tapnet import TapNet
 from utils import (
@@ -208,11 +208,14 @@ def test_best_model(best_result, args):
 
     with torch.no_grad():
         output, proto_dist = model(model_params)
-        y_true = labels[idx_test].cpu()
-        y_pred = torch.argmax(output[idx_test], dim=1).cpu()
-        cm_test = confusion_matrix(y_true, y_pred)
+        y_true = labels[idx_test]
+        y_pred = torch.argmax(output[idx_test], dim=1)
+        confmat = ConfusionMatrix(
+            task="binary" if nclass == 2 else "multilabel", num_labels=nclass
+        )
+        cm = confmat(y_true, y_pred)
         fbeta_test = fbeta(output[idx_val], labels[idx_val])
-        print(f"CM: {cm_test}, fbeta: {fbeta_test}")
+        print(f"CM: {cm}, fbeta: {fbeta_test}")
 
 
 def parse_args():
@@ -357,9 +360,7 @@ if __name__ == "__main__":
     if args.cuda:
         torch.cuda.manual_seed(args.seed)
 
-    # set path for gpu server
-    if os.uname()[1] == "e9f2fb23c0a3":
-        args.data_path = "/workspace/data/TobiasW/ray-inception/data"
+        
 
     args.sparse = True
     args.layers = [int(l) for l in args.layers.split(",")]
